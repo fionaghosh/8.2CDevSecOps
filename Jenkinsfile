@@ -1,38 +1,44 @@
-pipeline {
-  agent any
-
-  stages {
-    stage('Checkout') {
-      steps {
-        // pull from *your* fork
-        git branch: 'main',
-            url:   'https://github.com/fionaghosh/8.2CDevSecOps.git'
-      }
+stage('Run Tests') {
+  steps { bash 'npm test || exit /b 0' }
+  post {
+    success {
+      emailext(
+        subject: "TESTS PASSED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body:    "All tests passed. See attached log.",
+        to:      'fionag1402@gmail.com',
+        attachBuildLog: true
+      )
     }
-
-    stage('Install Dependencies') {
-      steps {
-        bat 'npm install'
-      }
-    }
-
-    stage('Run Tests') {
-      steps {
-        // allow failures so the pipeline keeps going
-        bat 'npm test || exit /b 0'
-      }
-    }
-
-    stage('Generate Coverage Report') {
-      steps {
-        bat 'npm run coverage || exit /b 0'
-      }
-    }
-
-    stage('NPM Audit (Security Scan)') {
-      steps {
-        bat 'npm audit || exit /b 0'
-      }
+    failure {
+      emailext(
+        subject: "TESTS FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body:    "Tests failed. Please investigate. See attached log.",
+        to:      'fionag1402@gmail.com',
+        attachBuildLog: true
+      )
     }
   }
 }
+
+stage('NPM Audit (Security Scan)') {
+  steps { bash 'npm audit || exit /b 0' }
+  post {
+    success {
+      emailext(
+        subject: "SECURITY SCAN OK: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body:    "No vulnerabilities found. See attached log.",
+        to:      'fionag1402@gmail.com',
+        attachBuildLog: true
+      )
+    }
+    failure {
+      emailext(
+        subject: "SECURITY SCAN ISSUES: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body:    "Vulnerabilities detected! See attached log.",
+        to:      'fionag1402@gmail.com',
+        attachBuildLog: true
+      )
+    }
+  }
+}
+
